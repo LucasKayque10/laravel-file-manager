@@ -1,0 +1,44 @@
+{
+    "name": "lucas-barros/laravel-file-manager",
+    "description": "A simple and flexible file management package for Laravel.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Lucas Barros"
+        }
+    ],
+    "keywords": [
+        "laravel",
+        "file",
+        "files",
+        "upload",
+        "storage",
+        "media"
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/support": "^11.0|^12.0",
+        "illuminate/database": "^11.0|^12.0",
+        "illuminate/filesystem": "^11.0|^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "LucasBarros\\LaravelFileManager\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "LucasBarros\\LaravelFileManager\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "LucasBarros\\LaravelFileManager\\LaravelFileManagerServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
