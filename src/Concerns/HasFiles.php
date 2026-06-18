@@ -11,7 +11,6 @@ use InvalidArgumentException;
 
 trait HasFiles
 {
-
     protected static function bootHasFiles(): void
     {
         static::deleting(function ($model) {
@@ -41,11 +40,7 @@ trait HasFiles
             'fileable'
         )
             ->using(Fileable::class)
-            ->withPivot([
-                'collection',
-                'type',
-                'sort_order',
-            ])
+            ->withPivot(Fileable::PIVOT_COLUMNS)
             ->withTimestamps();
     }
 
@@ -78,9 +73,9 @@ trait HasFiles
             }
             
             $this->attachFile(
-                $file,
-                $collection,
-                $type
+                file: $file,
+                collection: $collection,
+                type: $type
             );
         }
     }
