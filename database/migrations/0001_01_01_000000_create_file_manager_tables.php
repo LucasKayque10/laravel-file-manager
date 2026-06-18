@@ -66,6 +66,8 @@ return new class extends Migration
 
             $table->morphs('fileable');
 
+            $table->text('description')->nullable();
+
             $table->string('collection');
 
             $table->string('type')->nullable();
