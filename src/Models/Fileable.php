@@ -15,6 +15,8 @@ class Fileable extends MorphPivot
         'fileable_type',
         'fileable_id',
 
+        'description',
+        
         'collection',
         'type',
 

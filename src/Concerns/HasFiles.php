@@ -87,12 +87,14 @@ trait HasFiles
 
     public function attachFile(
         File $file,
+        ?string $description = null,
         string $collection = 'default',
         ?string $type = null,
         int $sortOrder = 0
     ): static {
         $this->files()->syncWithoutDetaching([
             $file->id => [
+                'description' => $description,
                 'collection' => $collection,
                 'type' => $type,
                 'sort_order' => $sortOrder,

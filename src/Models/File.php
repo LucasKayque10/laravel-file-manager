@@ -46,6 +46,18 @@ class File extends Model
         'creator_id',
     ];
 
+    protected static function booted(): void
+    {
+        static::forceDeleted(function (File $file) {
+
+            if (! config('file-manager.auto_delete_physical_file')) {
+                return;
+            }
+
+            Storage::disk($file->disk)->delete($file->path);
+        });
+    }
+
     public function fileables(): HasMany
     {
         return $this->hasMany(
@@ -65,7 +77,12 @@ class File extends Model
         return $this->morphTo();
     }
 
-    public function exists(): bool
+    public function isOrphan(): bool
+    {
+        return !$this->fileables()->exists();
+    }
+
+    public function fileExists(): bool
     {
         return Storage::disk($this->disk)
             ->exists($this->path);
@@ -84,7 +101,7 @@ class File extends Model
 
     public function deleteFile(): bool
     {
-        if ($this->exists()) {
+        if ($this->fileExists()) {
             Storage::disk($this->disk)
                 ->delete($this->path);
         }
