@@ -1,0 +1,6 @@
+/vendor/
+/.phpunit.cache/
+/.env
+/.env.*
+/workbench/storage/
+/workbench/bootstrap/cache/

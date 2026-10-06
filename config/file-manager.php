@@ -114,4 +114,49 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Imagens
+    |--------------------------------------------------------------------------
+    |
+    | Configurações padrão para imagens.
+    |
+    */
+
+    'image' => [
+
+        'optimization' => [
+            'enabled' => env(
+                'FILE_MANAGER_IMAGE_OPTIMIZATION_ENABLED',
+                true
+            ),
+
+            'driver' => env(
+                'FILE_MANAGER_IMAGE_DRIVER',
+                'imagick'
+            ),
+
+            'format' => env(
+                'FILE_MANAGER_IMAGE_FORMAT',
+                'webp'
+            ),
+
+            'quality' => (int) env(
+                'FILE_MANAGER_IMAGE_QUALITY',
+                90
+            ),
+
+            'max_width' => (int) env(
+                'FILE_MANAGER_IMAGE_MAX_WIDTH',
+                1600
+            ),
+
+            'max_height' => (int) env(
+                'FILE_MANAGER_IMAGE_MAX_HEIGHT',
+                1600
+            ),
+        ],
+
+    ],
+
 ];
