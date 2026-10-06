@@ -16,7 +16,7 @@ class LaravelFileManagerServiceProvider extends ServiceProvider
 
         $this->app->singleton(
             'file-manager',
-            fn () => new FileManagerService()
+            fn ($app) => $app->make(FileManagerService::class)
         );
     }
 
