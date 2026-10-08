@@ -159,4 +159,36 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | PDFs
+    |--------------------------------------------------------------------------
+    |
+    | Configurações padrão para otimização de arquivos PDF.
+    |
+    | A otimização utiliza o Ghostscript instalado no sistema.
+    |
+    */
+
+    'pdf' => [
+
+        'optimization' => [
+            'enabled' => env(
+                'FILE_MANAGER_PDF_OPTIMIZATION_ENABLED',
+                true
+            ),
+
+            'quality' => env(
+                'FILE_MANAGER_PDF_QUALITY',
+                'ebook'
+            ),
+
+            'ghostscript_binary' => env(
+                'FILE_MANAGER_PDF_GHOSTSCRIPT_BINARY',
+                'gs'
+            ),
+        ],
+
+    ],
+
 ];

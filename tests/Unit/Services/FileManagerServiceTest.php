@@ -9,11 +9,13 @@ use Intervention\Image\Drivers\Imagick\Driver;
 use Intervention\Image\ImageManager;
 use LucasBarros\LaravelFileManager\Models\File as FileModel;
 use LucasBarros\LaravelFileManager\Services\FileManagerService;
+use LucasBarros\LaravelFileManager\Tests\Support\PdfFixture;
 use LucasBarros\LaravelFileManager\Tests\TestCase;
 
 class FileManagerServiceTest extends TestCase
 {
     use RefreshDatabase;
+
     public function test_it_uploads_and_optimizes_an_image(): void
     {
         Storage::fake('local');
@@ -234,6 +236,188 @@ class FileManagerServiceTest extends TestCase
             );
         } finally {
             @unlink($sourcePath);
+        }
+    }
+
+    public function test_it_uploads_and_optimizes_a_pdf(): void
+    {
+        Storage::fake('local');
+
+        config()->set(
+            'file-manager.disk',
+            'local'
+        );
+
+        config()->set(
+            'file-manager.pdf.optimization.enabled',
+            true
+        );
+
+        config()->set(
+            'file-manager.pdf.optimization.quality',
+            'ebook'
+        );
+
+        config()->set(
+            'file-manager.pdf.optimization.ghostscript_binary',
+            'gs'
+        );
+
+        $sourcePath = PdfFixture::create();
+
+        $originalSize = filesize($sourcePath);
+
+        $uploadedFile = new UploadedFile(
+            $sourcePath,
+            'documento.pdf',
+            'application/pdf',
+            null,
+            true
+        );
+
+        try {
+            $file = app(FileManagerService::class)->upload(
+                $uploadedFile
+            );
+
+            $this->assertInstanceOf(
+                FileModel::class,
+                $file
+            );
+
+            $this->assertSame(
+                'pdf',
+                $file->extension
+            );
+
+            $this->assertSame(
+                'application/pdf',
+                $file->mime_type
+            );
+
+            $this->assertSame(
+                'documento.pdf',
+                $file->original_name
+            );
+
+            $this->assertGreaterThan(
+                0,
+                $file->size
+            );
+
+            $this->assertLessThan(
+                $originalSize,
+                $file->size
+            );
+
+            Storage::disk('local')->assertExists(
+                $file->path
+            );
+
+            $storedPath = Storage::disk('local')->path(
+                $file->path
+            );
+
+            $this->assertSame(
+                filesize($storedPath),
+                $file->size
+            );
+
+            $this->assertSame(
+                hash_file(
+                    config('file-manager.hash_algorithm', 'sha256'),
+                    $storedPath
+                ),
+                $file->hash
+            );
+
+            $this->assertSame(
+                'application/pdf',
+                mime_content_type($storedPath)
+            );
+        } finally {
+            PdfFixture::cleanup($sourcePath);
+        }
+    }
+
+    public function test_it_uploads_a_pdf_without_optimization_when_disabled(): void
+    {
+        Storage::fake('local');
+
+        config()->set(
+            'file-manager.disk',
+            'local'
+        );
+
+        config()->set(
+            'file-manager.pdf.optimization.enabled',
+            false
+        );
+
+        $sourcePath = PdfFixture::create();
+
+        $originalSize = filesize($sourcePath);
+
+        $uploadedFile = new UploadedFile(
+            $sourcePath,
+            'documento.pdf',
+            'application/pdf',
+            null,
+            true
+        );
+
+        try {
+            $file = app(FileManagerService::class)->upload(
+                $uploadedFile
+            );
+
+            $this->assertInstanceOf(
+                FileModel::class,
+                $file
+            );
+
+            $this->assertSame(
+                'pdf',
+                $file->extension
+            );
+
+            $this->assertSame(
+                'application/pdf',
+                $file->mime_type
+            );
+
+            $this->assertSame(
+                'documento.pdf',
+                $file->original_name
+            );
+
+            $this->assertSame(
+                $originalSize,
+                $file->size
+            );
+
+            Storage::disk('local')->assertExists(
+                $file->path
+            );
+
+            $storedPath = Storage::disk('local')->path(
+                $file->path
+            );
+
+            $this->assertSame(
+                $originalSize,
+                filesize($storedPath)
+            );
+
+            $this->assertSame(
+                hash_file(
+                    config('file-manager.hash_algorithm', 'sha256'),
+                    $sourcePath
+                ),
+                $file->hash
+            );
+        } finally {
+            PdfFixture::cleanup($sourcePath);
         }
     }
 }

@@ -17,36 +17,48 @@ class FileManagerNonImageTest extends TestCase
     {
         Storage::fake('local');
 
-        config()->set('file-manager.disk', 'local');
+        config()->set(
+            'file-manager.disk',
+            'local'
+        );
+
         config()->set(
             'file-manager.image.optimization.enabled',
             true
         );
 
+        config()->set(
+            'file-manager.pdf.optimization.enabled',
+            true
+        );
+
         $uploadedFile = UploadedFile::fake()->create(
-            'documento.pdf',
+            'documento.txt',
             100,
-            'application/pdf'
+            'text/plain'
         );
 
         $file = app(FileManagerService::class)->upload(
             $uploadedFile
         );
 
-        $this->assertInstanceOf(FileModel::class, $file);
+        $this->assertInstanceOf(
+            FileModel::class,
+            $file
+        );
 
         $this->assertSame(
-            'pdf',
+            'txt',
             $file->extension
         );
 
         $this->assertSame(
-            'application/pdf',
+            'text/plain',
             $file->mime_type
         );
 
         $this->assertSame(
-            'documento.pdf',
+            'documento.txt',
             $file->original_name
         );
 

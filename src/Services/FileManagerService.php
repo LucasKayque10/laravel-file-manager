@@ -13,6 +13,7 @@ class FileManagerService
 {
     public function __construct(
         private ImageOptimizer $imageOptimizer,
+        private PdfOptimizer $pdfOptimizer,
     ) {}
 
     public function upload(
@@ -38,6 +39,9 @@ class FileManagerService
                 'image/'
             );
 
+            $isPdf = $fileTemp->getMimeType()
+                === 'application/pdf';
+
             $optimizedFile = null;
 
             try {
@@ -51,7 +55,19 @@ class FileManagerService
                     $optimizedFile = $this->imageOptimizer->optimize(
                         $fileTemp
                     );
+                } elseif (
+                    $isPdf
+                    && config(
+                        'file-manager.pdf.optimization.enabled',
+                        true
+                    )
+                ) {
+                    $optimizedFile = $this->pdfOptimizer->optimize(
+                        $fileTemp
+                    );
+                }
 
+                if ($optimizedFile !== null) {
                     $directory = $this->getDirectory();
 
                     $filename = $uuid . '.'
@@ -68,7 +84,7 @@ class FileManagerService
 
                     if (! $path) {
                         throw new \RuntimeException(
-                            'Failed to store optimized image.'
+                            'Failed to store optimized file.'
                         );
                     }
 
