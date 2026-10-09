@@ -11,6 +11,12 @@ use LucasBarros\LaravelFileManager\Models\File as FileModel;
 
 class FileManagerService
 {
+    /**
+     * Deve permanecer igual à versão utilizada pelo comando
+     * OptimizeExistingFiles.
+     */
+    private const PDF_OPTIMIZATION_VERSION = 1;
+
     public function __construct(
         private ImageOptimizer $imageOptimizer,
         private PdfOptimizer $pdfOptimizer,
@@ -34,37 +40,73 @@ class FileManagerService
 
             $uuid = (string) Str::uuid();
 
+            $mimeTypeOriginal = $fileTemp->getMimeType()
+                ?? 'application/octet-stream';
+
             $isImage = str_starts_with(
-                $fileTemp->getMimeType() ?? '',
+                $mimeTypeOriginal,
                 'image/'
             );
 
-            $isPdf = $fileTemp->getMimeType()
-                === 'application/pdf';
+            $isPdf = $mimeTypeOriginal === 'application/pdf';
+
+            $imageOptimizationEnabled = config(
+                'file-manager.image.optimization.enabled',
+                true
+            );
+
+            $pdfOptimizationEnabled = config(
+                'file-manager.pdf.optimization.enabled',
+                true
+            );
 
             $optimizedFile = null;
+            $metadata = [];
+
+            $originalSize = (int) $fileTemp->getSize();
 
             try {
-                if (
-                    $isImage
-                    && config(
-                        'file-manager.image.optimization.enabled',
-                        true
-                    )
-                ) {
+                if ($isImage && $imageOptimizationEnabled) {
                     $optimizedFile = $this->imageOptimizer->optimize(
                         $fileTemp
                     );
-                } elseif (
-                    $isPdf
-                    && config(
-                        'file-manager.pdf.optimization.enabled',
-                        true
-                    )
-                ) {
+                } elseif ($isPdf && $pdfOptimizationEnabled) {
                     $optimizedFile = $this->pdfOptimizer->optimize(
                         $fileTemp
                     );
+                }
+
+                /*
+                 * Se o otimizador retornou um arquivo, compara o tamanho
+                 * antes de decidir se o resultado deve ser armazenado.
+                 */
+                if ($optimizedFile !== null) {
+                    $optimizedSize = (int) $optimizedFile['size'];
+
+                    /*
+                     * Não utiliza o resultado se ele não for menor.
+                     * O upload mantém o arquivo original.
+                     */
+                    if (
+                        ($isPdf || $isImage)
+                        && $optimizedSize >= $originalSize
+                    ) {
+                        if ($isPdf) {
+                            $metadata = $this->buildPdfOptimizationMetadata(
+                                status: 'no_savings',
+                                hash: $this->hashLocalFile(
+                                    $fileTemp->getRealPath()
+                                ),
+                                originalSize: $originalSize,
+                                finalSize: $optimizedSize,
+                                timestampKey: 'attempted_at',
+                            );
+                        }
+
+                        @unlink($optimizedFile['path']);
+
+                        $optimizedFile = null;
+                    }
                 }
 
                 if ($optimizedFile !== null) {
@@ -90,24 +132,27 @@ class FileManagerService
 
                     $extension = $optimizedFile['extension'];
                     $mimeType = $optimizedFile['mime_type'];
-                    $size = $optimizedFile['size'];
+                    $size = (int) $optimizedFile['size'];
 
-                    $hash = hash_file(
-                        config(
-                            'file-manager.hash_algorithm',
-                            'sha256'
-                        ),
-                        $optimizedFile['path']
+                    /*
+                     * Calcula o hash do arquivo já armazenado.
+                     * Funciona também com discos remotos.
+                     */
+                    $hash = $this->hashStoredFile(
+                        $disk,
+                        $path
                     );
+
+                    if ($isPdf) {
+                        $metadata = $this->buildPdfOptimizationMetadata(
+                            status: 'completed',
+                            hash: $hash,
+                            originalSize: $originalSize,
+                            finalSize: $size,
+                            timestampKey: 'optimized_at',
+                        );
+                    }
                 } else {
-                    $hash = hash_file(
-                        config(
-                            'file-manager.hash_algorithm',
-                            'sha256'
-                        ),
-                        $fileTemp->getRealPath()
-                    );
-
                     $directory = $this->getDirectory();
 
                     $filename = $uuid . '.'
@@ -133,7 +178,34 @@ class FileManagerService
 
                     $mimeType = $fileTemp->getMimeType();
 
-                    $size = $fileTemp->getSize();
+                    $size = (int) Storage::disk($disk)->size($path);
+
+                    $hash = $this->hashStoredFile(
+                        $disk,
+                        $path
+                    );
+
+                    /*
+                     * Registra que a otimização de PDF foi tentada,
+                     * mas não houve redução útil, inclusive quando
+                     * o otimizador retornou null.
+                     *
+                     * Se a otimização estiver desabilitada, não
+                     * registra uma tentativa inexistente.
+                     */
+                    if (
+                        $isPdf
+                        && $pdfOptimizationEnabled
+                        && $metadata === []
+                    ) {
+                        $metadata = $this->buildPdfOptimizationMetadata(
+                            status: 'no_savings',
+                            hash: $hash,
+                            originalSize: $size,
+                            finalSize: $size,
+                            timestampKey: 'attempted_at',
+                        );
+                    }
                 }
 
                 return FileModel::create([
@@ -147,12 +219,13 @@ class FileManagerService
                         ->getClientOriginalName(),
 
                     'extension' => $extension,
-
                     'mime_type' => $mimeType,
-
                     'size' => $size,
-
                     'hash' => $hash,
+
+                    'metadata' => $metadata === []
+                        ? null
+                        : $metadata,
 
                     'creator_type' => auth()->user()?->getMorphClass(),
                     'creator_id' => auth()->id(),
@@ -167,6 +240,100 @@ class FileManagerService
                 }
             }
         });
+    }
+
+    /**
+     * Cria os metadados padronizados da otimização de PDF.
+     */
+    private function buildPdfOptimizationMetadata(
+        string $status,
+        string $hash,
+        int $originalSize,
+        int $finalSize,
+        string $timestampKey,
+    ): array {
+        return [
+            'optimization' => [
+                'pdf' => [
+                    'status' => $status,
+                    'version' => self::PDF_OPTIMIZATION_VERSION,
+                    'hash' => $hash,
+                    $timestampKey => now()->toISOString(),
+                    'size_before' => $originalSize,
+                    'size_after' => $finalSize,
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Calcula o hash de um arquivo local sem carregar seu conteúdo
+     * inteiro na memória.
+     */
+    private function hashLocalFile(string $path): string
+    {
+        $algorithm = $this->getHashAlgorithm();
+
+        $hash = hash_file($algorithm, $path);
+
+        if ($hash === false) {
+            throw new \RuntimeException(
+                'Não foi possível calcular o hash do arquivo original.'
+            );
+        }
+
+        return $hash;
+    }
+
+    /**
+     * Calcula o hash do conteúdo efetivamente armazenado.
+     */
+    private function hashStoredFile(
+        string $diskName,
+        string $path,
+    ): string {
+        $stream = Storage::disk($diskName)->readStream($path);
+
+        if ($stream === false) {
+            throw new \RuntimeException(
+                "Não foi possível ler o arquivo armazenado: {$path}"
+            );
+        }
+
+        try {
+            $context = hash_init($this->getHashAlgorithm());
+
+            if (hash_update_stream($context, $stream) === false) {
+                throw new \RuntimeException(
+                    "Não foi possível calcular o hash do arquivo: {$path}"
+                );
+            }
+
+            return hash_final($context);
+        } finally {
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+        }
+    }
+
+    /**
+     * Valida e retorna o algoritmo configurado para os hashes.
+     */
+    private function getHashAlgorithm(): string
+    {
+        $algorithm = config(
+            'file-manager.hash_algorithm',
+            'sha256'
+        );
+
+        if (! in_array($algorithm, hash_algos(), true)) {
+            throw new \RuntimeException(
+                "Algoritmo de hash inválido: {$algorithm}"
+            );
+        }
+
+        return $algorithm;
     }
 
     private function getDirectory(): string

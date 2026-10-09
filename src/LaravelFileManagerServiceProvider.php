@@ -3,6 +3,7 @@
 namespace LucasBarros\LaravelFileManager;
 
 use Illuminate\Support\ServiceProvider;
+use LucasBarros\LaravelFileManager\Console\Commands\OptimizeExistingFiles;
 use LucasBarros\LaravelFileManager\Services\FileManagerService;
 
 class LaravelFileManagerServiceProvider extends ServiceProvider
@@ -31,5 +32,11 @@ class LaravelFileManagerServiceProvider extends ServiceProvider
                 'file-manager.php'
             ),
         ], 'file-manager-config');
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                OptimizeExistingFiles::class,
+            ]);
+        }
     }
 }
