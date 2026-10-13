@@ -1,24 +1,22 @@
 # Laravel File Manager
 
-Gerenciamento de arquivos para aplicações Laravel, com suporte a upload, armazenamento, metadados, compartilhamento e otimização automática de imagens e PDFs.
+Gerenciamento de arquivos para aplicações Laravel, com suporte a upload, armazenamento, metadados, compartilhamento, associação de arquivos a modelos Eloquent e otimização automática de imagens e PDFs.
 
 ## Requisitos
 
-* PHP 8.2+
+- PHP 8.2+
+- Laravel 11 ou 12
+- Extensão `fileinfo`
 
-* Laravel 11 ou 12
+Para otimização de imagens:
 
-* Extensão `fileinfo`
+- Extensão `imagick` ou `gd`
+- Suporte ao formato de saída configurado
 
-* Para otimização de imagens:
+Para otimização de PDFs:
 
-  * `imagick` ou `gd`
-  * suporte ao formato de saída configurado
-
-* Para otimização de PDFs:
-
-  * Ghostscript 10+ recomendado
-  * comando `gs` disponível no sistema
+- Ghostscript 10+ recomendado
+- Comando `gs` disponível no sistema
 
 A otimização de PDFs requer o Ghostscript quando estiver habilitada.
 
@@ -68,37 +66,22 @@ return [
     'auto_delete_physical_file' => true,
 
     'image' => [
-
         'optimization' => [
-
             'enabled' => true,
-
             'driver' => 'imagick',
-
             'format' => 'webp',
-
             'quality' => 90,
-
             'max_width' => 1600,
-
             'max_height' => 1600,
-
         ],
-
     ],
 
     'pdf' => [
-
         'optimization' => [
-
             'enabled' => true,
-
             'quality' => 'ebook',
-
             'ghostscript_binary' => 'gs',
-
         ],
-
     ],
 
 ];
@@ -106,19 +89,19 @@ return [
 
 ## Otimização de imagens
 
-A partir da versão `1.1`, imagens podem ser otimizadas automaticamente durante o upload.
+Desde a versão `1.1`, imagens podem ser otimizadas automaticamente durante o upload.
 
 Por padrão:
 
-* imagens são convertidas para WebP;
-* a qualidade é `90`;
-* a largura máxima é `1600px`;
-* a altura máxima é `1600px`;
-* a proporção original é preservada;
-* imagens menores não são ampliadas;
-* o arquivo original não é armazenado; a versão otimizada é armazenada.
+- As imagens são convertidas para WebP.
+- A qualidade é `90`.
+- A largura máxima é `1600px`.
+- A altura máxima é `1600px`.
+- A proporção original é preservada.
+- Imagens menores não são ampliadas.
+- O arquivo original não é armazenado separadamente; a versão otimizada é armazenada.
 
-Por exemplo, uma imagem de `3000 × 2000` será armazenada como aproximadamente:
+Por exemplo, uma imagem de `3000 × 2000` será armazenada aproximadamente com estas dimensões:
 
 ```text
 1600 × 1067
@@ -136,19 +119,14 @@ As configurações podem ser sobrescritas através do `.env`:
 
 ```env
 FILE_MANAGER_IMAGE_OPTIMIZATION_ENABLED=true
-
 FILE_MANAGER_IMAGE_DRIVER=imagick
-
 FILE_MANAGER_IMAGE_FORMAT=webp
-
 FILE_MANAGER_IMAGE_QUALITY=90
-
 FILE_MANAGER_IMAGE_MAX_WIDTH=1600
-
 FILE_MANAGER_IMAGE_MAX_HEIGHT=1600
 ```
 
-### Desabilitar otimização
+### Desabilitar a otimização
 
 Para manter o comportamento original dos uploads de imagens:
 
@@ -176,15 +154,15 @@ O driver escolhido precisa estar disponível na instalação do PHP.
 
 ## Otimização de PDFs
 
-Arquivos PDF podem ser otimizados automaticamente durante o upload utilizando o Ghostscript.
+A partir da versão `1.2`, arquivos PDF podem ser otimizados automaticamente durante o upload utilizando o Ghostscript.
 
 Por padrão:
 
-* a otimização está habilitada;
-* o preset utilizado é `ebook`;
-* o arquivo resultante continua sendo PDF;
-* o arquivo original somente é substituído quando a versão otimizada fica menor;
-* quando a versão otimizada não reduz o tamanho do arquivo, o PDF original é mantido.
+- A otimização está habilitada.
+- O preset utilizado é `ebook`.
+- O arquivo resultante continua sendo PDF.
+- O arquivo original somente é substituído quando a versão otimizada fica menor.
+- Quando a versão otimizada não reduz o tamanho do arquivo, o PDF original é mantido.
 
 A otimização utiliza o comando `gs` do Ghostscript.
 
@@ -192,7 +170,7 @@ A otimização utiliza o comando `gs` do Ghostscript.
 
 O Ghostscript precisa estar instalado no sistema e disponível no `PATH`.
 
-Por exemplo:
+Verifique a instalação:
 
 ```bash
 gs --version
@@ -230,17 +208,17 @@ default
 
 De forma geral:
 
-* `screen` prioriza arquivos menores e visualização em tela;
-* `ebook` oferece um equilíbrio entre tamanho e qualidade;
-* `printer` é voltado para impressão com maior qualidade;
-* `prepress` é voltado para fluxos de pré-impressão;
-* `default` utiliza as configurações padrão do Ghostscript.
+- `screen`: prioriza arquivos menores para visualização em tela.
+- `ebook`: oferece equilíbrio entre tamanho e qualidade.
+- `printer`: é voltado para impressão com maior qualidade.
+- `prepress`: é voltado para fluxos de pré-impressão.
+- `default`: utiliza as configurações padrão do Ghostscript.
 
-Para a maioria dos documentos destinados a visualização digital, `ebook` é o preset recomendado.
+Para a maioria dos documentos destinados à visualização digital, `ebook` é o preset recomendado.
 
-### Desabilitar otimização
+### Desabilitar a otimização
 
-Para manter o PDF original:
+Para manter o PDF sem otimização:
 
 ```env
 FILE_MANAGER_PDF_OPTIMIZATION_ENABLED=false
@@ -252,13 +230,47 @@ Quando a otimização estiver desabilitada, o PDF seguirá o fluxo normal de upl
 
 Nem todo PDF será reduzido pelo Ghostscript.
 
-Quando o arquivo otimizado tiver tamanho igual ou superior ao original, a versão otimizada é descartada e o arquivo original é armazenado.
+Quando o arquivo otimizado tiver tamanho igual ou superior ao original, a versão otimizada é descartada e o arquivo original é mantido.
 
-Isso evita que uma operação de otimização resulte em um arquivo maior.
+Isso evita que a operação de otimização resulte em um arquivo maior.
+
+## Otimização de arquivos existentes
+
+A versão `1.2` disponibiliza o comando Artisan `file-manager:optimize-existing-files` para processar arquivos que já estão armazenados.
+
+Execute o comando:
+
+```bash
+php artisan file-manager:optimize-existing-files
+```
+
+O comando processa os formatos suportados pelos otimizadores de imagens e PDFs, respeitando as configurações correspondentes.
+
+### Simulação
+
+Para simular a execução sem substituir os arquivos:
+
+```bash
+php artisan file-manager:optimize-existing-files --dry-run
+```
+
+### Forçar o reprocessamento
+
+Para forçar o reprocessamento dos arquivos, conforme as regras do comando:
+
+```bash
+php artisan file-manager:optimize-existing-files --force
+```
+
+O comando considera os arquivos existentes e seus metadados para evitar processamento desnecessário.
+
+Para PDFs, o arquivo original é preservado quando a otimização não reduz o tamanho. O processamento também contempla validação do arquivo otimizado antes da substituição.
+
+Antes de executar o comando em produção, recomenda-se realizar um backup e avaliar o resultado em um ambiente de teste.
 
 ## Upload
 
-O upload pode ser realizado através da Facade `FileManager`:
+O upload pode ser realizado através da facade `FileManager`:
 
 ```php
 use LucasBarros\LaravelFileManager\Facades\FileManager;
@@ -266,7 +278,7 @@ use LucasBarros\LaravelFileManager\Facades\FileManager;
 $file = FileManager::upload($uploadedFile);
 ```
 
-Também é possível informar o disk e a visibilidade:
+Também é possível informar o disco e a visibilidade:
 
 ```php
 $file = FileManager::upload(
@@ -306,35 +318,37 @@ files/2026/10/550e8400-e29b-41d4-a716-446655440000.webp
 
 Para arquivos otimizados, os metadados registrados correspondem ao arquivo físico armazenado.
 
-Por exemplo, para uma imagem:
+Exemplo de metadados de uma imagem convertida para WebP:
 
 ```text
 original_name: foto.jpg
-
 extension:     webp
-
 mime_type:     image/webp
-
 size:          tamanho do WebP
-
 hash:          hash do WebP
 ```
 
-Para um PDF otimizado:
+Exemplo de metadados de um PDF otimizado:
 
 ```text
 original_name: documento.pdf
-
 extension:     pdf
-
 mime_type:     application/pdf
-
 size:          tamanho do PDF otimizado
-
 hash:          hash do PDF otimizado
 ```
 
 O nome original enviado pelo usuário permanece disponível através de `original_name`.
+
+## UUID dos vínculos de arquivos
+
+A partir da versão `1.2`, os registros da tabela `fileables` possuem um UUID único, além do identificador numérico (`id`).
+
+Cada UUID identifica individualmente um vínculo entre um arquivo e um modelo Eloquent.
+
+O UUID não substitui o identificador numérico nem altera as chaves utilizadas internamente nos relacionamentos existentes.
+
+Ao atualizar uma instalação que já possui registros na tabela `fileables`, a nova migration adiciona a coluna `uuid` e preenche os UUIDs dos vínculos existentes.
 
 ## Arquivos que não possuem otimização
 
@@ -342,17 +356,17 @@ A otimização automática é aplicada somente aos formatos suportados pelo paco
 
 Atualmente:
 
-* imagens podem ser otimizadas;
-* PDFs podem ser otimizados;
-* outros formatos seguem o fluxo normal de upload.
+- Imagens podem ser otimizadas.
+- PDFs podem ser otimizados.
+- Outros formatos seguem o fluxo normal de upload.
 
 Exemplos de arquivos que continuam sem otimização automática:
 
-* documentos;
-* planilhas;
-* arquivos de texto;
-* arquivos compactados;
-* outros formatos não suportados pelos otimizadores.
+- Documentos.
+- Planilhas.
+- Arquivos de texto.
+- Arquivos compactados.
+- Outros formatos não suportados pelos otimizadores.
 
 ## Hash
 
@@ -380,9 +394,9 @@ Quando habilitado, a exclusão definitiva do registro pode remover também o arq
 
 ## Desenvolvimento
 
-O projeto utiliza [Orchestra Testbench](https://packages.tools/testbench) para os testes do pacote.
+O projeto utiliza [Orchestra Testbench](https://packages.tools/testbench) para executar os testes do pacote.
 
-Instale as dependências de desenvolvimento:
+Instale as dependências:
 
 ```bash
 composer install
@@ -394,25 +408,25 @@ Execute os testes:
 vendor/bin/phpunit tests
 ```
 
-A suíte cobre, entre outros casos:
+A suíte contempla casos relacionados a:
 
-* otimização de imagens;
-* conversão para WebP;
-* redimensionamento mantendo proporção;
-* prevenção de upscale;
-* upload de imagens sem otimização;
-* otimização de PDFs;
-* preservação do PDF original quando a otimização não reduz o tamanho;
-* upload de PDFs sem otimização;
-* upload de arquivos não-imagem e não-PDF;
-* metadados do arquivo otimizado;
-* hash do arquivo armazenado.
+- Otimização de imagens.
+- Conversão para WebP.
+- Redimensionamento mantendo a proporção.
+- Prevenção de ampliação de imagens menores.
+- Upload de imagens sem otimização.
+- Otimização de PDFs.
+- Preservação do PDF original quando a otimização não reduz o tamanho.
+- Upload de PDFs sem otimização.
+- Upload de arquivos que não são imagens nem PDFs.
+- Metadados do arquivo otimizado.
+- Hash do arquivo armazenado.
 
 ## Compatibilidade
 
-| Versão | PHP  | Laravel     |
-| ------ | ---- | ----------- |
-| 1.x    | ^8.2 | 11.x / 12.x |
+| Versão | PHP | Laravel |
+|---|---|---|
+| 1.x | ^8.2 | 11.x / 12.x |
 
 ## Licença
 
