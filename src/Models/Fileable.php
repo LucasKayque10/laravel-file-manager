@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Fileable extends MorphPivot
 {
     public const PIVOT_COLUMNS = [
+        'uuid',
         'description',
         'collection',
         'type',
@@ -23,6 +24,8 @@ class Fileable extends MorphPivot
     protected $table = 'fileables';
 
     protected $fillable = [
+        'uuid',
+        
         'file_id',
 
         'fileable_type',

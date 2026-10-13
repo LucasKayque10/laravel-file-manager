@@ -6,6 +6,7 @@ use LucasBarros\LaravelFileManager\Models\File;
 use LucasBarros\LaravelFileManager\Models\Fileable;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Str;
 
 use InvalidArgumentException;
 
@@ -89,6 +90,7 @@ trait HasFiles
     ): static {
         $this->files()->syncWithoutDetaching([
             $file->id => [
+                'uuid' => (string) Str::uuid(),
                 'description' => $description,
                 'collection' => $collection,
                 'type' => $type,
