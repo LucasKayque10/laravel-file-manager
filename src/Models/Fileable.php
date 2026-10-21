@@ -2,10 +2,12 @@
 
 namespace LucasBarros\LaravelFileManager\Models;
 
-use Illuminate\Database\Eloquent\Relations\MorphPivot;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphPivot;
+use Illuminate\Support\Str;
 
 /**
+ * @property string $uuid
  * @property string|null $description
  * @property string $collection
  * @property string|null $type
@@ -20,24 +22,40 @@ class Fileable extends MorphPivot
         'type',
         'sort_order',
     ];
-    
+
     protected $table = 'fileables';
+
+    /*
+     * Fileable também é usado como model comum (via morphMany)
+     * pelo HasFiles. O Pivot desativa estes dois comportamentos
+     * por padrão, então são reativados aqui.
+     */
+    public $incrementing = true;
+
+    public $timestamps = true;
 
     protected $fillable = [
         'uuid',
-        
+
         'file_id',
 
         'fileable_type',
         'fileable_id',
 
         'description',
-        
+
         'collection',
         'type',
 
         'sort_order',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Fileable $fileable) {
+            $fileable->uuid ??= (string) Str::uuid();
+        });
+    }
 
     public function file(): BelongsTo
     {
