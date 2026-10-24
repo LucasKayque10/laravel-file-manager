@@ -236,13 +236,18 @@ trait HasFiles
      * Remove o arquivo do model em TODAS as coleções.
      * Para remover de uma coleção específica, use detachFromCollection().
      */
+
     public function detachFile(File $file): static
     {
+        $fileId = $file->getKey();
+
         $this->fileables()
-            ->where('file_id', $file->getKey())
+            ->where('file_id', $fileId)
             ->delete();
 
         $this->unsetRelation('files');
+
+        $this->forceDeleteOrphansAfterCommit([$fileId]);
 
         return $this;
     }
@@ -256,15 +261,24 @@ trait HasFiles
         string $collection,
         ?array $fileIds = null
     ): static {
-        $query = $this->fileables()->where('collection', $collection);
+        $query = $this->fileables()
+            ->where('collection', $collection);
 
         if ($fileIds !== null) {
             $query->whereIn('file_id', $fileIds);
         }
 
+        $removedFileIds = (clone $query)
+            ->pluck('file_id')
+            ->unique()
+            ->values()
+            ->all();
+
         $query->delete();
 
         $this->unsetRelation('files');
+
+        $this->forceDeleteOrphansAfterCommit($removedFileIds);
 
         return $this;
     }
@@ -275,8 +289,7 @@ trait HasFiles
      * ficarem órfãos, somente após o commit.
      */
     public function clearFiles(
-        ?string $collection = null,
-        bool $deleteFiles = false
+        ?string $collection = null
     ): static {
         $fileIds = DB::transaction(function () use ($collection) {
             $query = $this->fileables();
@@ -298,10 +311,8 @@ trait HasFiles
 
         $this->unsetRelation('files');
 
-        if ($deleteFiles) {
-            $this->forceDeleteOrphansAfterCommit($fileIds);
-        }
-
+        $this->forceDeleteOrphansAfterCommit($fileIds);
+        
         return $this;
     }
 
@@ -343,7 +354,6 @@ trait HasFiles
         string $collection,
         ?string $description = null,
         ?string $type = null,
-        bool $deleteReplaced = false,
         ?string $relation = null
     ): static {
         $replacedIds = DB::transaction(function () use (
@@ -388,9 +398,7 @@ trait HasFiles
             $this->unsetRelation($relation);
         }
 
-        if ($deleteReplaced) {
-            $this->forceDeleteOrphansAfterCommit($replacedIds);
-        }
+        $this->forceDeleteOrphansAfterCommit($replacedIds);
 
         return $this;
     }
@@ -402,16 +410,17 @@ trait HasFiles
     */
 
     /**
-     * Apaga definitivamente (registro + arquivo físico, conforme
-     * auto_delete_physical_file) os arquivos que ficaram órfãos.
-     * Executa só depois do commit, para não apagar o arquivo físico
-     * caso a transação faça rollback.
+     * Exclui definitivamente os registros de arquivos que ficaram órfãos,
+     * incluindo o arquivo físico somente se a configuração correspondente
+     * estiver habilitada.
      *
-     * @param  array<int>  $fileIds
+     * Executa após o commit para evitar exclusões em caso de rollback.
+     *
+     * @param array<int|string> $fileIds
      */
     protected function forceDeleteOrphansAfterCommit(array $fileIds): void
     {
-        if ($fileIds === []) {
+        if ($fileIds === [] || ! config('file-manager.auto_delete_orphan_file')) {
             return;
         }
 

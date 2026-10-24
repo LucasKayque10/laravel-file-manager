@@ -5,6 +5,7 @@ namespace LucasBarros\LaravelFileManager\Models;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphPivot;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @property string $uuid
@@ -54,6 +55,26 @@ class Fileable extends MorphPivot
     {
         static::creating(function (Fileable $fileable) {
             $fileable->uuid ??= (string) Str::uuid();
+        });
+
+        static::deleted(function (Fileable $fileable) {
+            $fileId = $fileable->file_id;
+
+            if (! $fileId) {
+                return;
+            }
+
+            if (! config('file-manager.auto_delete_orphan_file')){
+                return;
+            }
+
+            DB::afterCommit(function () use ($fileId) {
+                $file = File::query()->find($fileId);
+
+                if ($file && $file->isOrphan()) {
+                    $file->forceDelete();
+                }
+            });
         });
     }
 
