@@ -354,21 +354,28 @@ trait HasFiles
         string $collection,
         ?string $description = null,
         ?string $type = null,
-        ?string $relation = null
+        ?string $relation = null,
     ): static {
         $replacedIds = DB::transaction(function () use (
             $file,
             $collection,
             $description,
-            $type
+            $type,
         ) {
-            // Tudo que não for exatamente este arquivo (mesmo type).
-            $stale = $this->fileables()
-                ->where('collection', $collection)
+            $query = $this->fileables()
+                ->where('collection', $collection);
+
+            if ($type === null) {
+                $query->whereNull('type');
+            } else {
+                $query->where('type', $type);
+            }
+
+            $stale = $query
                 ->get()
-                ->reject(fn (Fileable $row) =>
-                    (int) $row->file_id === (int) $file->getKey()
-                    && $row->type === $type
+                ->reject(
+                    fn (Fileable $row): bool =>
+                        (int) $row->file_id === (int) $file->getKey()
                 );
 
             if ($stale->isNotEmpty()) {
@@ -387,7 +394,6 @@ trait HasFiles
             return $stale
                 ->pluck('file_id')
                 ->unique()
-                ->reject(fn ($id) => (int) $id === (int) $file->getKey())
                 ->values()
                 ->all();
         });

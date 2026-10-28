@@ -32,10 +32,9 @@ class FileManagerNonImageTest extends TestCase
             true
         );
 
-        $uploadedFile = UploadedFile::fake()->create(
+        $uploadedFile = UploadedFile::fake()->createWithContent(
             'documento.txt',
-            100,
-            'text/plain'
+            str_repeat('x', 100),
         );
 
         $file = app(FileManagerService::class)->upload(

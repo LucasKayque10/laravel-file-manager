@@ -4,3 +4,4 @@
 /.env.*
 /workbench/storage/
 /workbench/bootstrap/cache/
+/build/
